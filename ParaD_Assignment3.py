@@ -4,138 +4,6 @@
 
 import re
 
-# function UNIFY(x,y,s) returns a substitution to make x and y identical
-# inputs:
-# x, a var, const, list, or compound expression
-# y (same)
-# s, a substitution built up so far (optional, default is empty)
-# if s = failure then return failure
-# else if x = y then return s
-# else if var(x) the return unify-var(x,y,s)
-# else if var(y) then return unify-var(y,x,s)
-# else if LIST(x) and LIST(y) then
-# return UNIFY(x.REST,y.REST,UNIFY(x.FIRST,y.FIRST,s))
-# else return False
-
-def dp_unify(x, y, s=[]):
-    if type(s) != list:
-        print('error')
-        return Exception("Invalid parameter exception")
-    elif x == y:
-        s.append(x)
-        return s
-    elif dp_is_var(x):
-        return dp_unify_var(x, y, s)
-    elif dp_is_var(y):
-        return dp_unify_var(y, x, s)
-    elif dp_is_compound(x) and dp_is_compound(y):
-        x_op = dp_get_op(x)
-        x_args = dp_get_args(x)
-        y_op = dp_get_op(y)
-        y_args = dp_get_args(y)
-        dp_unify(x_op, y_op, s)
-        return dp_unify(x_args, y_args, s)
-    elif type(x) == list and type(y) == list:
-        s.append(dp_unify(x[0], y[0], s))
-        return dp_unify(x[1:], y[1:], s)
-    else:
-        return False
-
-# function UNIFY-VAR(var,x,s) returns a substitution
-# if {var/val} is in s then return UNIFY(val,x,s)
-# else if {x/val} is in s then return UNIFY(var,val,s)
-# else if OCCUR-CHECK(var,x) then return failure
-# else return add {var/x} to s
-
-def dp_unify_var(var, x, s):
-    for n, item in enumerate(s):
-        if item == None:
-            s.remove(item)
-            continue
-
-        if var in item:
-            val = item[len(var)+1:]
-            if val == x:
-                continue
-            if var == val:
-                s[n] = item[:len(var)+1]+x
-                continue
-            return dp_unify(val, x, s)
-        if x in item:
-            val = item[len(x)+1:]
-            if x == val:
-                continue
-            return dp_unify(var, val, s)
-
-    if var == x:
-        return False
-
-    toAdd = "%s/%s" % (var, x)
-    if toAdd not in s:
-        s.append("%s/%s" % (var, x))
-    return s
-
-    # if "%s/%s" % (var, x) in s:
-    #     return dp_unify(x, x, s)
-    # elif "%s/%s" % (x, var) in s:
-    #     return dp_unify(var, var, s)
-    # elif var == x:
-    #     print('Cannot be unified')
-    #     return False
-    # else:
-    #     return s.append("%s/%s" % (var, x))
-
-def dp_is_var(literal):
-    return literal[0] == '?'
-
-def dp_is_compound(c):
-    return '(' in c
-
-
-def dp_is_var_val(literal):
-    return '/' in literal
-
-
-def dp_get_args(literal):
-    return (''.join(re.split('(\()', literal)[1:])
-                .replace(' ', '')[1:-1]).split(',')
-
-
-def dp_get_op(literal):
-    return re.split('\(', literal)[0]
-
-
-def dp_format_unified_result(lst):
-    i = 0
-    e = len(lst)
-    retval = []
-    for item in lst:
-        retval.append(item)
-        if dp_is_var_val(item):
-            if i < e - 1:
-                retval.append(',')
-            else:
-                retval.append(')')
-        else:
-            if i < e:
-                retval.append('(')
-            else:
-                retval.append(')')
-        i += 1
-    return retval
-
-def dp_get_unification(first, second):
-
-    unification = dp_unify(first, second, [])
-
-    if False in unification:
-        return '\nFalse\n'
-
-    unification = [item for item in unification if type(item) == str]
-    unification = dp_format_unified_result(unification)
-
-    return '\n%s\n' % ''.join(unification)
-
 def dp_run():
     first = ''.join(input(str("Please type first variable: ")).split(' '))
     if first.lower() == 'quit' or first.lower() == 'exit':
@@ -149,87 +17,204 @@ def dp_run():
 
     print(unification)
 
-    # 1.
-    # human(?x) U
-    # human(?y) = > {?x /?y}
-    # 2.
-    # likes(?x,?y) U
-    # likes(pat0, chris2) = > {?x / pat0,?y / chris2}
-    # 3.
-    # likes(?x,?x) U
-    # likes(pat0, chris2) = > false
-    # 4.
-    # likes(?x,?x) U
-    # likes(?y, pat0) = > {?x / pat0, ?y / pat0}
-    # 5.
-    # likes(Pat0, Pat0)
-    # U
-    # likes(?x,?x) = > {?x / Pat0)
-    # 6.
-    # likes(Pat0,?x) U
-    # likes(?y, Pat0) = > {?y / Pat0, ?x / Pat0}
-    # 7.
-    # likes(?x,?y,?y) U
-    # likes(Pat0, Chris0) = > false
+def dp_get_unification(first, second):
 
+    unification = dp_unify(first, second, [])
+
+    if False in unification:
+        return '\nFalse\n'
+
+    unification = [item for item in unification if type(item) == str]
+    unification = dp_format_unified_result(unification)
+
+    return '\n%s\n' % ''.join(unification)
+
+def dp_unify(x, y, s=[]):
+    if type(s) != list:
+        print('error')
+        return Exception("Invalid parameter exception")
+    elif x == y:
+        s.append(x)
+        return s
+    elif dp_is_var(x):
+        return dp_unify_var(x, y, s)
+    elif dp_is_var(y):
+        return dp_unify_var(y, x, s)
+    elif dp_is_compound(x) or dp_is_compound(y):
+        x_op = dp_get_op(x)
+        x_args = dp_get_args(x)
+        y_op = dp_get_op(y)
+        y_args = dp_get_args(y)
+        if x_op != y_op:
+            if len(x_args) == 1:
+                return dp_unify_var(x, y, s)
+            if len(y_args) == 1:
+                return dp_unify_var(y, x, s)
+            # dp_unify(x_op, y_op, s)
+        return dp_unify(x_args, y_args, s)
+    elif type(x) == list and type(y) == list:
+        if len(x) > 0 and len(y) > 0 and len(x) == len(y):
+            dp_unify(x[0], y[0], s)
+            return dp_unify(x[1:], y[1:], s)
+        else:
+            s.append(False)
+            return s
+    else:
+        s.append(False)
+        return s
+
+def dp_unify_var(var, x, s):
+    for n, item in enumerate(s):
+        if item == None:
+            s.remove(item)
+            continue
+
+        if var in item:
+            val = item.split('/')[1]
+            if val == x:
+                continue
+            if var == val:
+                # If var already exists for value, replace current value so that we
+                s[n] = item[:len(var)+1]+x
+                continue
+            return dp_unify(val, x, s)
+
+        if x in item:
+            val = item.split('/')[1]
+            if x != val and x not in val:
+                return dp_unify(var, val, s)
+
+    if var == x:
+        s.append(False)
+        return s
+
+    toAdd = "%s/%s" % (var, x)
+    if toAdd not in s:
+        s.append("%s/%s" % (var, x))
+    return s
+
+def dp_is_var(literal):
+    return literal[0] == '?'
+
+def dp_is_skolem(literal):
+    return '?' in literal
+
+def dp_is_compound(c):
+    return '(' in c
+
+def dp_is_var_val(literal):
+    return '/' in literal
+
+def dp_get_args(literal):
+    return (''.join(re.split('(\()', literal)[1:])
+                .replace(' ', '')[1:-1]).split(',')
+
+def dp_get_op(literal):
+    return re.split('[\(\/]', literal)[0]
+
+def dp_format_unified_result(lst):
+    e = len(lst)
+    retval = ['{']
+    for i, item in enumerate(lst):
+        retval.append(item)
+        if dp_is_var_val(item):
+            if i < e - 1:
+                retval.append(',')
+            else:
+                retval.append('}')
+        i += 1
+    return retval
 
 print()
 
 # RUNS THE PROGRAM
-# print('\nPlease type \'quit\' and press enter to exit at any time\n')
-# while (1):
-#     dp_run()
+print('\nPlease type \'quit\' and press enter to exit at any time\n')
+while (1):
+    dp_run()
 
-# TEST FULL
-
-# Exception
-first = "human(?x)"
-second = "human(?y)"
-
-print(dp_unify(first, second, None))
-print()
-
-# 1
-first = "human(?x)"
-second = "human(?y)"
-
-print("#1: "+dp_get_unification(first, second))
-
-# 2
-first = "likes(?x,?y)"
-second = "likes(pat0,chris2)"
-
-print("#2: "+dp_get_unification(first, second))
-
-# 3 TODO
-first = "likes(?x,?x)"
-second = "likes(pat0,chris2)"
-
-print("#3: "+dp_get_unification(first, second))
-
-# 4 TODO
-first = "likes(?x,?x)"
-second = "likes(?y,pat0)"
-
-print("#4: "+dp_get_unification(first, second))
-
-# 5 TODO
-first = "likes(Pat0,Pat0)"
-second = "likes(?x,?x)"
-
-print("#5: "+dp_get_unification(first, second))
-
-# 6
-first = "likes(Pat0,?x)"
-second = "likes(?y,Pat0)"
-
-print("#6: "+dp_get_unification(first, second))
-
-# 7 TODO
-# first = "likes(?x,?y,?y)"
-# second = "likes(pat0,chris)"
-#
-# print("#7: "+dp_get_unification(first, second))
+# TEST ALL
+##def run_tests():
+##
+##    # Exception
+##    first = "human(?x)"
+##    second = "human(?y)"
+##
+##    print(dp_unify(first, second, None))
+##    print()
+##
+##    # 1
+##    first = "human(?x)"
+##    second = "human(?y)"
+##
+##    print("#1: " + dp_get_unification(first, second))
+##
+##    # 2
+##    first = "likes(?x,?y)"
+##    second = "likes(pat0,chris2)"
+##
+##    print("#2: " + dp_get_unification(first, second))
+##
+##    # 3
+##    first = "likes(?x,?x)"
+##    second = "likes(pat0,chris2)"
+##
+##    print("#3: " + dp_get_unification(first, second))
+##
+##    # 4
+##    first = "likes(?x,?x)"
+##    second = "likes(?y,pat0)"
+##
+##    print("#4: " + dp_get_unification(first, second))
+##
+##    # 5
+##    first = "likes(Pat0,Pat0)"
+##    second = "likes(?x,?x)"
+##
+##    print("#5: " + dp_get_unification(first, second))
+##
+##    # 6
+##    first = "likes(Pat0,?x)"
+##    second = "likes(?y,Pat0)"
+##
+##    print("#6: " + dp_get_unification(first, second))
+##
+##    # 7
+##    first = "likes(?x,?y,?y)"
+##    second = "likes(pat0,chris)"
+##
+##    print("#7: " + dp_get_unification(first, second))
+##
+##    # 8
+##    first = "likes(?x,?y)"
+##    second = "likes(friend-of(Pat0),Pat0)"
+##
+##    print("#8: " + dp_get_unification(first, second))
+##
+##    # 9
+##    first = "likes(friend-of(?y),?y)"
+##    second = "likes(friend-of(?x),?x)"
+##
+##    print("#9: " + dp_get_unification(first, second))
+##
+##    # 10
+##    first = "suburb(sk1(?c),?c)"
+##    second = "suburb(?x,Naperville)"
+##
+##    print("#10: " + dp_get_unification(first, second))
+##
+##    # 11
+##    first = "suburb(sk1(?c),?c)"
+##    second = "suburb(skcity(?c),Naperville)"
+##
+##    # print("#11: " + dp_get_unification(first, second))
+##
+##    # 12
+##    first = "suburb(sk1(?c),?c)"
+##    second = "suburb(sk1(?c),Naperville)"
+##
+##    # print("#12: " + dp_get_unification(first, second))
+##
+##run_tests()
 
 # TEST dp_is_compound FUNCTION
 ##compound = 'human(?x)'
